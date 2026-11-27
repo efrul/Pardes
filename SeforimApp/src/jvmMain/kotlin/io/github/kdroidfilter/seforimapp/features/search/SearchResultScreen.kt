@@ -83,23 +83,17 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LogoBranch
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.UnifiedSearchBar
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookdetails.BookDetails
-import io.github.kdroidfilter.seforimapp.features.search.area.LinkedResultsLine
-import io.github.kdroidfilter.seforimapp.features.search.area.SearchArea
-import io.github.kdroidfilter.seforimapp.features.search.area.asResult
-import io.github.kdroidfilter.seforimapp.features.search.area.linkedResults
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchModeEngine
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
-import io.github.kdroidfilter.seforimapp.framework.search.CommonSource
 import io.github.kdroidfilter.seforimapp.icons.WritingHand
 import io.github.kdroidfilter.seforimlibrary.core.models.SearchResult
 import io.github.santimattius.structured.annotations.StructuredScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -180,8 +174,6 @@ fun SearchResultInBookShellMvi(
     selectedCategoryIds: Set<Long>,
     // The books the results were narrowed to ("more from this book")
     bookFilterIds: Set<Long>,
-    // The book or author the query names, beside the results
-    entity: SearchEntity?,
     // The home page's bar state and callbacks, for the same bar here
     homeSearchUi: SearchHomeUiState,
     homeSearchCallbacks: HomeSearchCallbacks,
@@ -191,8 +183,6 @@ fun SearchResultInBookShellMvi(
     tabUi: BookTabUi,
     // Pardes: the grades given to the results shown, in feedback mode
     feedback: ImmutableMap<Long, FeedbackGrade> = persistentMapOf(),
-    // Pardes: the sources the first results link to, shown in the area beside them (docs/COMMON_SOURCES_PLAN.md)
-    commonSources: ImmutableList<CommonSource> = persistentListOf(),
 ) {
     val tabId = bookUiState.tabId
     val currentOnEvent by rememberUpdatedState(onEvent)
@@ -222,14 +212,12 @@ fun SearchResultInBookShellMvi(
                 categories = categories,
                 selectedCategoryIds = selectedCategoryIds,
                 bookFilterIds = bookFilterIds,
-                entity = entity,
                 homeSearchUi = homeSearchUi,
                 homeSearchCallbacks = homeSearchCallbacks,
                 preview = preview,
                 actions = actions,
                 tabId = tabId,
                 feedback = feedback,
-                commonSources = commonSources,
             )
         }
     }
@@ -246,14 +234,12 @@ private fun SearchResultContentMvi(
     categories: ImmutableList<SearchResultViewModel.SearchTreeCategory>,
     selectedCategoryIds: Set<Long>,
     bookFilterIds: Set<Long>,
-    entity: SearchEntity?,
     homeSearchUi: SearchHomeUiState,
     homeSearchCallbacks: HomeSearchCallbacks,
     preview: SearchResultViewModel.PassagePreview?,
     actions: SearchShellActions,
     tabId: String,
     feedback: ImmutableMap<Long, FeedbackGrade> = persistentMapOf(),
-    commonSources: ImmutableList<CommonSource> = persistentListOf(),
 ) {
     val appSettings = LocalAppGraph.current.appSettings
     // Pardes: feedback mode (Settings), each result's grade buttons
@@ -268,11 +254,7 @@ private fun SearchResultContentMvi(
     val oneBook = inBook || (state.scopeBook != null && noMarks) || state.scopeTocId != null
     // In the library's order every passage shows too: a book's stand together, as it has them
     val everyPassage = oneBook || state.catalogOrder
-    // Pardes: the list narrowed to the results that link to a source of the area beside it, by the source's count
-    // (SearchArea.kt); all of them otherwise
-    var linkedTo by remember(state.executedQuery) { mutableStateOf<CommonSource?>(null) }
-    val listed = remember(visibleResults, linkedTo) { linkedResults(visibleResults, linkedTo) }
-    val items = remember(listed, bookCounts, everyPassage) { flattenResults(listed, bookCounts, everyPassage) }
+    val items = remember(visibleResults, bookCounts, everyPassage) { flattenResults(visibleResults, bookCounts, everyPassage) }
     val lineToItemIndex =
         remember(items) {
             buildMap {
@@ -383,9 +365,6 @@ private fun SearchResultContentMvi(
 
     // The selection lives in the ViewModel, as the preview it drives
     val selectedLineId = preview?.hit?.lineId
-    val showBookDetails by appSettings.bookDetailsPaneFlow.collectAsState()
-    // Pardes: the panel of the book or the author the query names, shown or hidden from the bar (SearchPanelsSettings.kt)
-    val showEntity by appSettings.flow(SearchPanelsSettings.entity).collectAsState()
     val listFocus = remember { FocusRequester() }
     // Pardes: back to the bar once a tab is picked, for Enter to search again in the tabs picked
     val barFocus = remember { FocusRequester() }
@@ -570,8 +549,6 @@ private fun SearchResultContentMvi(
                                     }
                                 }
                             }
-                            // Pardes: while the list shows only the results that link to a source, which, and the way back
-                            LinkedResultsLine(linkedTo, listed.size, onShowAll = { linkedTo = null })
                         }
                         Divider(Orientation.Horizontal, Modifier.fillMaxWidth())
                         Box(
@@ -664,30 +641,8 @@ private fun SearchResultContentMvi(
             },
             secondContent = {
                 Column(Modifier.fillMaxSize()) {
-                    // The query's book is already in the details pane when a result of it is shown
-                    val duplicate =
-                        entity is SearchEntity.BookEntity && showBookDetails && entity.book.id == preview?.hit?.bookId
-                    // Pardes: one area for what the query names and the sources its first results link to (SearchArea.kt)
-                    SearchArea(
-                        query = state.executedQuery,
-                        entity = entity?.takeIf { !duplicate && showEntity },
-                        sources = commonSources,
-                        onShowSource = { source ->
-                            val hit = source.asResult()
-                            actions.onRequestBreadcrumb(hit)
-                            actions.onPreviewLine(hit)
-                        },
-                        onNarrowResults = { source -> linkedTo = source },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { shown, extra ->
-                        EntityPanel(
-                            entity = shown,
-                            onOpenBookAt = actions.onOpenBookAt,
-                            onOpenAuthor = actions.onOpenAuthor,
-                            modifier = Modifier.fillMaxWidth(),
-                            extra = extra,
-                        )
-                    }
+                    // Pardes: the book or the author the query names, with the rest of the area beside the results, in
+                    // its pane of the dock (area/SearchAreaPane.kt)
                     // Until the first result's passage is loaded, the pane says so
                     if (preview == null && (items.isNotEmpty() || state.isLoading)) {
                         Box(Modifier.weight(1f).fillMaxWidth().card(), contentAlignment = Alignment.Center) {
@@ -1311,7 +1266,7 @@ private const val SPLIT_SAVE_DELAY_MS = 300L
 
 /** The book or author a query names, as Google's knowledge panel: what it is, and buttons to go there. */
 @Composable
-private fun EntityPanel(
+internal fun EntityPanel(
     entity: SearchEntity,
     onOpenBookAt: (bookId: Long, lineId: Long) -> Unit,
     onOpenAuthor: (Long) -> Unit,

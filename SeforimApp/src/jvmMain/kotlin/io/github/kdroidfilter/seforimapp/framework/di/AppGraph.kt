@@ -123,4 +123,7 @@ abstract class AppGraph : ViewModelGraph {
 
     /** Pardes: the library's lines by the heRefs Sefaria's data names. */
     abstract val sefariaLines: io.github.kdroidfilter.seforimapp.features.sefaria.SefariaLines
+
+    /** Pardes: whether each search tab has the pane of the area beside its results open (SearchAreaPane). */
+    abstract val searchAreas: io.github.kdroidfilter.seforimapp.features.search.area.SearchAreas
 }

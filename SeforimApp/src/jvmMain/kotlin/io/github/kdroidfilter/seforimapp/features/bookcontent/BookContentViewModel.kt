@@ -32,6 +32,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.needsLineSel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.showInToc
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookContentUseCaseFactory
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.altTocIdOfSearchMatch
+import io.github.kdroidfilter.seforimapp.features.search.SearchPanelsSettings
 import io.github.kdroidfilter.seforimapp.features.search.domain.BookDetailsLoader
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
@@ -674,6 +675,10 @@ class BookContentViewModel(
                 // Pardes: the line's topics' pane, one setting for every tab (LineTopicsPane)
                 BookContentEvent.ToggleTopics ->
                     appSettings[SefariaSettings.topicsPane] = !appSettings[SefariaSettings.topicsPane]
+
+                // Pardes: the pane of the area beside a search's results, one setting for every search tab (SearchAreaPane)
+                BookContentEvent.ToggleSearchArea ->
+                    appSettings[SearchPanelsSettings.area] = !appSettings[SearchPanelsSettings.area]
 
                 BookContentEvent.CycleDiacritics ->
                     cycleDiacriticsForCurrentCategory()

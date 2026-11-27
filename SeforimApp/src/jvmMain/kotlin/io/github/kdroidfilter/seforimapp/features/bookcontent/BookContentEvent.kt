@@ -185,6 +185,9 @@ sealed interface BookContentEvent {
     /** Pardes: shows or hides the pane of the line's topics, from Sefaria (in every tab: one setting; LineTopicsPane). */
     data object ToggleTopics : BookContentEvent
 
+    /** Pardes: shows or hides the pane of the area beside a search's results (in every search tab: one setting). */
+    data object ToggleSearchArea : BookContentEvent
+
     data object CycleDiacritics : BookContentEvent
 
     data class ContentScrolled(

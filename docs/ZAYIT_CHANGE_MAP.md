@@ -31,7 +31,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (412 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (414 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -444,9 +444,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +47 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search
+- **Change:** modified, +50 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search
   speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane, A whole page in
-  the view, Daf view, A book's own pages, Search results, Sefaria's content.
+  the view, Daf view, A book's own pages, Search results, Sefaria's content, The search's area pane.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
     `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
@@ -475,7 +475,9 @@ The entries of this section by kind:
     books (request 97 of stage 3).
   - After `libraryLinks`, with a KDoc line each marked "Pardes:", `abstract val sefariaWindows:
     io.github.kdroidfilter.seforimapp.features.sefaria.SefariaWindows` and `abstract val sefariaLines:
-    io.github.kdroidfilter.seforimapp.features.sefaria.SefariaLines`, fully qualified as the others.
+    io.github.kdroidfilter.seforimapp.features.sefaria.SefariaLines`, fully qualified as the others; and last `abstract
+    val searchAreas: …search.area.SearchAreas`, with a KDoc marked "Pardes:": whether each search tab has the pane of
+    the area beside its results open.
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
@@ -827,9 +829,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +68 −6 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+- **Change:** modified, +66 −8 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
   Desktop link, The user's PDF books, Search modes, Two tabs side by side, A search from anywhere, Common sources line,
-  The search's area.
+  The search's area, The search's area pane.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
@@ -839,8 +841,8 @@ The entries of this section by kind:
     taken out of the bar is a tab picked no longer.
   - The search tab's own bar passes `onNewBarOpened = null` (a bar in a new tab opens empty, as in Zayit; this one opens
     where its search looked).
-  - `feedback` is collected from `viewModel.feedbackFlow` and passed to `SearchResultInBookShellMvi`; so is
-    `commonSources`, from `viewModel.commonSourcesFlow`.
+  - `feedback` is collected from `viewModel.feedbackFlow` and passed to `SearchResultInBookShellMvi`; Zayit's
+    `entity` (`viewModel.entityFlow`) no longer is, nor collected here: the area's pane reads it (`SearchAreaPane.kt`).
   - `rememberSearchShellActions` wires `onPreviewLine` to `viewModel::previewLine` (a source of the area shown in the
     preview).
   - `rememberHomeSearchCallbacks` wires `onPickCategory`, `onClearCategory`, `onAddScope`, `onRemoveScope` and
@@ -1245,8 +1247,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentEvent.kt`
 
-- **Change:** modified, +56 −0 lines. Feature: Daf view, Scan view, Commentators in their own panes, Commentator
-  selection kept, Reader's default commentators, Find results pane, A book's own pages, Sefaria's content.
+- **Change:** modified, +59 −0 lines. Feature: Daf view, Scan view, Commentators in their own panes, Commentator
+  selection kept, Reader's default commentators, Find results pane, A book's own pages, Sefaria's content, The
+  search's area pane.
 - **What:**
   - `ToggleDafView`: shows a Talmud tractate as its Vilna page, or as its text again; `ToggleScanView`: as its scan
     (request 46), or as its text again.
@@ -1263,7 +1266,8 @@ The entries of this section by kind:
   - Since 2026-11-24 `SelectionCleared`: a second click on what is marked on a book's own pages lets the selection go,
     its lines and its passage (request 88 of stage 3: "לחיצה חוזרת על מה שכבר מודגש תבטל את ההדגשה").
   - `ToggleTopics`, after `ToggleFindResults`: the pane of the line's topics, from Sefaria, shown or hidden, in every
-    tab (one setting, `SefariaSettings.topicsPane`), with a KDoc marked "Pardes:".
+    tab (one setting, `SefariaSettings.topicsPane`), with a KDoc marked "Pardes:"; and after it `ToggleSearchArea`: the
+    pane of the area beside a search's results, in every search tab (`SearchPanelsSettings.area`), with its own.
 - **Why:** the daf view (`4efa3e3c`) and the scan view, the commentators' own panes (`d85afee7`, `831ad272`) and the selection kept from
   line to line (`3c6bae9b`, `49b456d4`) and the reader's default commentators are driven through the reader's events, as all of Zayit's reader actions are. The pane of the line's topics, of Sefaria's content the user chose on 2026-11-26, is toggled as the find results' is.
 - **Kind:** Pardes feature in Zayit's file.
@@ -1327,8 +1331,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +93 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes,
-  Commentator selection kept, Reader's default commentators, Find results pane, A book's own pages, Sefaria's content.
+- **Change:** modified, +98 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes,
+  Commentator selection kept, Reader's default commentators, Find results pane, A book's own pages, Sefaria's content,
+  The search's area pane.
 - **What:**
   - `onEvent` handles `ToggleDafView` and `ToggleScanView` (flip `dafView` and `scanView`, one at a time: the
     text, the daf and the scan are a tractate's three views), `DetachCommentator`, `ReattachCommentator` and
@@ -1362,6 +1367,8 @@ The entries of this section by kind:
     request 87 met: a comment of Rashi or Tosafot opened back from the daf.
   - Since 2026-11-24 `SelectionCleared` empties `selectedLines`, `primarySelectedLineId` and `selectedPassage`
     (request 88 of stage 3), as a Ctrl+click on the only selected line leaves them.
+  - `ToggleSearchArea` turns `SearchPanelsSettings.area` (the pane of the area beside a search's results), with a
+    comment marked "Pardes:" and its import, after `ToggleTopics`.
   - `ToggleTopics` turns `SefariaSettings.topicsPane` (the pane of the line's topics), with a comment marked "Pardes:"
     and its import.
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`); a PDF book
@@ -1427,8 +1434,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +121 −15 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
-  side, Pages in the dark theme's colours, A whole page in the view, A book's own pages, Sefaria's content, The search's cards shown or hidden.
+- **Change:** modified, +117 −15 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
+  side, Pages in the dark theme's colours, A whole page in the view, A book's own pages, Sefaria's content, The search's area pane.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`; for a commentary a tractate's daf prints, Rashi's, Tosafot's,
@@ -1474,20 +1481,19 @@ The entries of this section by kind:
     icon), lit while `SefariaSettings.topicsPane` is on, sending `ToggleTopics`, with a comment marked "Pardes:" and
     its import.
   - In a tab with no book (a search's results: `WindowBody` gives the end bar without a book to a search alone), after
-    "פרטי הספר", `SearchEntityPanelButton()` and `SearchTopicCardButton()`, under a comment marked "Pardes:", with
-    their imports: the cards beside the results, the book or author the query names and the topic it names, shown
-    or hidden as the reader's panes are from this bar.
+    "פרטי הספר", `SearchAreaPaneButton()` ("על החיפוש"), under a comment marked "Pardes:", with its import: the pane of
+    the area beside the results, shown or hidden as the reader's panes are from this bar.
 - **Why:** the daf view is opened from the reader's bar, and has a zoom of its own (`4efa3e3c`, `8d3825e7`); a button
   is enabled exactly when its pane has something to show, as Zayit's comment there says. The library of 2026-10-12 has
   75 books with commentary links and no flag for them, the 38 books of חברותא and their 38 books of notes among them:
   their notes could not be opened as commentaries, nor the Gemara as their source, as the user reported on 2026-11-10. The pane of the line's topics opens from the bar, as the references' and the other line panes do. The cards' buttons, as the user asked of the testers' builds of 2026-11-26: "עדיף פשוט שיהיה את המתג
-  בסרגל השמאלי כמו בשאר המקומות".
+  בסרגל השמאלי כמו בשאר המקומות"; one, the area's pane's, since the area is a pane (2026-11-27: "שיוכלו לשלוט בגובה ומיקום חלונית הנושאים").
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small; two buttons among the bar's and two under the zoom's, a branch before the diacritics button and
   a button after it, `ZoomButtons`' body, the references' availability and the two `…Enabled` lines.
 - **Smaller:** already minimal.
 - **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`, `bookConnections`); the scan's, two pages' and the pages'
-  colours' buttons were checked in the app, and the toggle on Bereshit, Mishnah Berakhot and Orach Chaim. The topics' button tried in the app. `SearchPanelsSettingsUiTest` (the cards' buttons); the buttons tried in the app (רבא).
+  colours' buttons were checked in the app, and the toggle on Bereshit, Mishnah Berakhot and Orach Chaim. The topics' button tried in the app. `SearchPanelsSettingsUiTest` (the pane's button); the button tried in the app (חנוכה, רבא, 2026-11-27).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LineReferences.kt`
 
@@ -1604,8 +1610,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +318 −44 lines. Feature: Commentators in their own panes, A pane at the window's edge,
-  Pane layout kept, Find results pane, Keys in the book tree and the contents, Sefaria's content.
+- **Change:** modified, +363 −44 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+  Pane layout kept, Find results pane, Keys in the book tree and the contents, Sefaria's content, The search's area pane.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
     `ReaderPane.standard`, and a `data class Commentator(name)` is a pane per split-off commentator, closed by
@@ -1669,6 +1675,17 @@ The entries of this section by kind:
     עליו"), with comments marked "Pardes:" and their imports: `PaneSync` asks `PaneFocusRequests` for the navigation
     panes the same tab's demand adds (not those of a tab switched to, nor at start), and `PaneBody` provides each
     pane's key (`LocalPaneFocusKey`, the window's and the pane's ids) around its content, indented once. The pane of the line's topics, of Sefaria's content the user chose on 2026-11-26, beside the references.
+  - The pane of the area beside a search's results: `ReaderPane.SearchArea` ("search-area", "על החיפוש", docked left
+    of the text, 340 dp, sized by the dock, toggled by `BookContentEvent.ToggleSearchArea`), last among the `standard`
+    panes, with a comment marked "Pardes:"; `writeBack` and `position` give it the branch of the panes never planned;
+    `selectedTabDemand` adds it in a search tab while `rememberSearchAreaShown` says so (asked for, and its search
+    naming something or linking to sources) and no book is shown (`searchAreaPane`); `BookPaneBody` draws it with
+    `SearchAreaPane` for the search tab, its hide sending `ToggleSearchArea`. The user's word of 2026-11-27: "שיוכלו לשלוט בגובה ומיקום חלונית הנושאים".
+  - In `PaneSync`, before the planned panes are sized, a pane beside the text that the dock sizes (no navigation pane,
+    none the tab's split percentages size) is brought back to 40% of the inner dock's width when it is wider
+    (`MAX_SIDE_SHARE`, under comments marked "Pardes:"): a pane pulled out into a window as wide as the dock and docked
+    back at a side kept that width, and the text, or the passage beside a search's results, went under it (the area,
+    floated from under the results and docked at their left, 2026-11-27).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the enum's every entry was rewritten, so any Zayit change to a pane's declaration, or a new pane,
   conflicts; `PaneSync` and `WindowPanes` are edited in their core loops.
@@ -2472,13 +2489,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +276 −59 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents, Common sources line, Sefaria's content, The search's cards shown or hidden, The search's area.
+- **Change:** modified, +246 −74 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents, Common sources line, Sefaria's content, The search's area pane, The search's area.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
   - With feedback mode on (`searchFeedbackFlow`), each result row ends with `SearchFeedbackButtons`.
-  - `SearchResultInBookShellMvi` and `SearchResultContentMvi` take `commonSources` too (the view model's
-    `commonSourcesFlow`, empty where it doesn't apply), for the area beside the results.
+  - `SearchResultInBookShellMvi` and `SearchResultContentMvi` no longer take Zayit's `entity` (the book or author the
+    query names), nor its comment: the area's pane reads it from the view model (`SearchAreaPane.kt`).
   - The status line names the category or books searched (`state.scopeLabel`), and in a category with base books and
     others offers the other choice (`search_switch_scope_all` / `…_base`).
   - The preview's highlights come from `rememberPreviewHighlights(...)` instead of an inline `produceState`.
@@ -2525,19 +2542,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
     the marks), or a search in one book with nothing checked (`state.scopeBook`, which the contents pane of a book
     checked also sets, counting then alone); a book checked with other places gets the screen as ever. The status line
     names the book checked alone by its results (the contents pane's book may be another's).
-  - At the top of the passage's pane, in place of Zayit's `if (entity != null && !duplicate) EntityPanel(…)`,
-    `SearchArea(…)` under a comment marked "Pardes:": the query, the entity while it is no duplicate and
-    `SearchPanelsSettings.entity` is on (`showEntity`, read beside `showBookDetails` under a comment marked "Pardes:",
-    which the search's end bar turns, `SearchEntityPanelButton` in `VerticalBars.kt`), `commonSources`, a source
-    opened in a new tab (`actions.onOpenBookAt`), and as its panel Zayit's `EntityPanel` call, its entity the one shown
-    and `extra = extra`; its import.
+  - Zayit's `if (entity != null && !duplicate) EntityPanel(…)` at the top of the passage's pane is gone, with the
+    `duplicate` it reads and `showBookDetails`, a comment marked "Pardes:" in its place: the book or the author the
+    query names, with the rest of the area beside the results, is in the area's pane of the dock (`SearchAreaPane.kt`,
+    which keeps Zayit's rule of the book already in the details pane). `EntityPanel` is internal, for that pane.
   - `EntityPanel` gains `extra` (a `ColumnScope` content, empty by default, under a comment marked "Pardes:"), drawn
     under `EntityDetails`: the rest of the area in Zayit's card.
-  - The area's sources: a click on one asks its breadcrumb and shows it in the preview (`actions.onPreviewLine` of
-    `source.asResult()`; `SearchShellActions` gains `onPreviewLine` under a comment marked "Pardes:"); its count narrows
-    the list to the results that link to it (`linkedTo`, kept for the query, and `listed = linkedResults(…)`, from which
-    `items` is built in place of `visibleResults`, under a comment marked "Pardes:"); while it is narrowed,
-    `LinkedResultsLine` under the status line's row says which source and leads back to all the results.
+  - The area's sources: `SearchShellActions` gains `onPreviewLine` under a comment marked "Pardes:" (a source shown in
+    the preview, from the area's pane, as a result is).
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
@@ -2546,7 +2558,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   of 2026-11-09, beside the status line's other choice. A tab picked alone unless Ctrl/Cmd is held, and the focus in
   the bar after it, are the user's request of 2026-11-12 (request 38). The search modes, the user's decision of
   2026-11-18 (request 54 of stage 3, the design's variant ב: in the bar's row). The topic's card, of Sefaria's content the user chose on 2026-11-26. The panels hidden, as the user asked of the testers' build of 2026-11-26: "צריך אפשרות להסתיר את
-  הדברים הללו בתוצאות חיפוש כמו בשאר המקומות", then "עדיף פשוט שיהיה את המתג בסרגל השמאלי".
+  הדברים הללו בתוצאות חיפוש כמו בשאר המקומות", then "עדיף פשוט שיהיה את המתג בסרגל השמאלי". The area in a pane of
+  its own, as the user asked of build 87 on 2026-11-27: "שיוכלו לשלוט בגובה ומיקום חלונית הנושאים".
 - **Kind:** Pardes feature hook.
 - **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over some fifteen
   places, and `FilterTabs`' body is now the set's form.
@@ -2670,7 +2683,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +538 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +532 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 497 Hebrew strings added in twenty-five blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -2709,9 +2722,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `search_area_also` ("גם:"), the kinds `search_area_kind_book`, `…_author`, `…_sage` and `…_topic`,
     `search_area_topic_sources`, `search_area_topic_line`, `search_area_sage_line`, `search_area_sage_mentions`,
     `search_area_sage_page` ("לדף החכם"), `search_area_sefaria_credit`, the sources' `search_area_sources` ("מקורות
-    שהתוצאות מפנות אליהם"), `search_area_sources_page`, `search_area_source_books`, `search_area_source_books_tip`
-    (what the number counts, and that a click shows those results), `search_area_linked` ("רק %2$d התוצאות שמפנות אל
-    %1$s") and `search_area_linked_all` ("כל התוצאות");
+    שהתוצאות מפנות אליהם") and `search_area_sources_page`;
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`, and under a comment the pin of
     the reader's default, `commentators_default_set`, `…_set_hint`, `…_replace`, `…_on` and `…_on_hint`;
@@ -2778,9 +2789,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
     and a sage's page, `sefaria_sage_*` (teachers, students, family, groups, mentioned in, all, an ambiguous name, its
     Wikipedia page); the generations, `sefaria_generation_*` (tannaim, amoraim, zugot, between them); and the reader's
     menu, `sefaria_mark_*` and `sefaria_copy_*` for a sugya, a Mishnah and a story (47 strings).
-  - The cards beside a search's results shown or hidden, under a comment after Sefaria's block, at the file's end:
-    the search's end bar's two buttons, `search_card_entity` ("ספר/מחבר") and `search_card_topic` ("נושא"), each with
-    its tooltip ("הצג ליד התוצאות את הספר או המחבר שחיפשת", "…את הנושא שחיפשת, מספריא").
+  - The pane of the area beside a search's results, under a comment after Sefaria's block, at the file's end: its
+    name and its button's in the search's end bar, `search_area_pane` ("על החיפוש"), and the button's tooltip,
+    `search_area_pane_tooltip` (what the pane shows, and that it is dragged to any side, sized and opened in a window of
+    its own).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -9014,10 +9026,11 @@ Sefaria's topic card and the line of common sources above the results (the desig
 topic, one person's faces together (a person and a topic by Sefaria's id, an author and either by two names shared),
 the first in full and the others on its "גם:" line, where a click shows one in full; then the sources the first results
 link to, each with its text. A book or an author stays Zayit's panel, which takes the rest of the area under its details
-(`EntityPanel`'s `extra`); a person or a topic, and the sources alone, are a card of the same look. The bar's two buttons
-still show or hide the book or author (`SearchPanelsSettings.entity`) and Sefaria's person and topic
-(`SefariaSettings.searchTopicCard`); the sources show as the line did. The hook in Zayit's code is in
-`SearchResultScreen.kt`.
+(`EntityPanel`'s `extra`); a person or a topic, and the sources alone, are a card of the same look. Since 2026-11-27 the
+area is a pane of the dock, as the user asked of build 87 ("שיוכלו לשלוט בגובה ומיקום חלונית הנושאים"): "על החיפוש", a column beside the passage at first,
+which the reader drags to any side, sizes and pulls out into a window of its own as any pane of the reader, open while
+its search names something or links to sources; one button in the search's end bar shows or hides it (the section after
+the next). The hooks in Zayit's code are in `SearchResultScreen.kt`, `TabsContent.kt` and `ReaderPanes.kt`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchFacets.kt`
 
@@ -9037,20 +9050,24 @@ still show or hide the book or author (`SearchPanelsSettings.entity`) and Sefari
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchArea.kt`
 
 - **Feature:** The search's area.
-- **Size:** 277 lines.
+- **Size:** 300 lines.
 - **What:** `SearchArea`: Sefaria's person and topic the query names (`SefariaSages.named`, `SefariaTopics.named` with
-  sources), read off the UI thread while their button is on; the facets of Zayit's entity and of them ordered and joined
+  sources), read off the UI thread (`SefariaNamed`, internal, which the pane's demand reads too); the facets of Zayit's entity and of them ordered and joined
   by `SearchFacets`; the entity shown, the first or the one picked on the "גם:" line (`AlsoLine`: a pill each, its kind,
   its name and what it holds, a click showing it); a book or an author in Zayit's panel (`panel`), with the lines of the
   person's faces of Sefaria's under it (`PersonFacets`: `SageLine`, `TopicLine`, the credit); a person (`SageDetails`)
   or a topic (`TopicDetails`) in a card of the panel's look (`AreaCard`); and under them the sources (`SourcesPart`,
-  `AreaSources.kt`), a click on one showing it in the preview (`onShowSource`), its count narrowing the results to those
-  that link to it (`onNarrowResults`). Nothing when the query names nothing and no source is common to its results.
-- **Reached from:** `SearchResultScreen.kt` (`SearchResultContentMvi`'s passage pane).
+  `AreaSources.kt`), a click on one showing it in the preview (`onShowSource`), as a result is (its count, which
+  narrowed the results to those that link to it, is gone since 2026-11-27). One column that scrolls; `wide` (the pane far wider than tall, docked under the
+  results), what the query names beside the sources, each scrolling on its own (`NAMED_SHARE` of the width). Nothing
+  when the query names nothing and no source is common to its results.
+- **Reached from:** `SearchAreaPane.kt` (the area's pane of the dock; until 2026-11-27, `SearchResultScreen.kt`'s
+  passage pane).
 - **Follows:** Zayit's `EntityPanel` (its card: the pane's `card()`, 16 dp in, 8 dp between) and `SearchStatusLine`
   (`ResultLink`, the grey of `readingSecondary`), and the topic card of Sefaria's content, which it takes in.
-- **Tests:** `SearchPanelsSettingsUiTest` (the topic as its setting is, a source alone opened); the rule's are
-  `SearchFacetsTest`; seen in the app on the whole library (שבת, רמב"ם, רבא, ברכת כהנים, שמע ישראל, 2026-11-27).
+- **Tests:** `SearchPanelsSettingsUiTest` (the topic shown, a source alone opened, the wide layout); the rule's are
+  `SearchFacetsTest`; seen in the app on the whole library (שבת, רמב"ם, רבא, ברכת כהנים, שמע ישראל, 2026-11-27; in its
+  pane, חנוכה and רבא, in a column, under the results and in a window of its own).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/AreaPerson.kt`
 
@@ -9068,25 +9085,55 @@ still show or hide the book or author (`SearchPanelsSettings.entity`) and Sefari
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/AreaSources.kt`
 
 - **Feature:** The search's area.
-- **Size:** 136 lines.
-- **What:** the area's sources: `SourcesPart` (a title with the page they are read from, then each source's place, a
-  link that shows it in the preview, its text in the book font on one line, and "N ספרים", a link to the results that
-  link to it, with the tooltip saying what the number counts and what a click does), `LinkedResultsLine` (over the list
-  narrowed to a source's results: which source, how many, "כל התוצאות"), `CommonSource.asResult` (a source as a result
-  of its own line, for the preview) and `linkedResults` (the results that link to a source, in their order; all of them
-  without one).
-- **Reached from:** `SearchArea`; `SearchResultScreen.kt` (`LinkedResultsLine`, `asResult`, `linkedResults`).
-- **Follows:** the line of common sources it replaces (`SearchStatusLine`'s grey 13 sp text, `ResultLink`, Jewel's
-  `Tooltip`).
-- **Tests:** `AreaSourcesTest`, `SearchPanelsSettingsUiTest`; seen in the app (שמע ישראל: the source in the preview, the
-  list narrowed to its 3 results and back, 2026-11-27).
+- **Size:** 109 lines.
+- **What:** the area's sources: `SourcesPart` (a title with the page they are read from, then each source, `SourceRow`:
+  its place in the accent's colour, underlined while the pointer is on it, over its text in the book font, two lines at
+  most, a click anywhere on it showing it in the preview, as a click on a result does) and `CommonSource.asResult` (a
+  source as a result of its own line, for the preview). Each source's count of the books linking to it ("3 ספרים"),
+  which narrowed the results to them, and the line over the narrowed list are gone, as the user asked on 2026-11-27:
+  "למה צריך להיות רשום ליד כל אחד 3 ספרים? גם רואים מיד כמה מקורות יש. לחיצה גם מסננת את התוצאות - אין בזה צורך שרק תציג את הספר כמו שלחיצה על תוצאה בחיפוש עושה ואז לחיצה על הספר פותחת לשונית".
+- **Reached from:** `SearchArea`; `SearchAreaPane.kt` (`asResult`).
+- **Follows:** the line of common sources it replaces (`SearchStatusLine`'s grey 13 sp text), and Zayit's `ResultLink`
+  (the accent, the underline on hover, the hand) for the whole source.
+- **Tests:** `AreaSourcesTest`, `SearchPanelsSettingsUiTest`; seen in the app (שמע ישראל: the source in the preview,
+  2026-11-27).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchAreaPane.kt`
+
+- **Feature:** The search's area pane.
+- **Size:** 168 lines.
+- **What:** `SearchAreaPane`: the pane of the area beside a search tab's results, Zayit's `PaneHeader` ("על החיפוש",
+  also its grip, its hide sending `ToggleSearchArea`) over `SearchArea`, the tab's query, the book or author it names
+  (none when the details pane shows its book, Zayit's rule), the sources its first results link to, a source shown in
+  the preview (`onRequestBreadcrumb`, `onPreviewLine` of `asResult()`), Zayit's `EntityPanel` as the area's panel, side by side once the pane is at least 720 dp wide and 1.8 times wider than
+  tall (`WIDE_MIN_WIDTH`, `WIDE_RATIO`); `rememberSearchAreaShown`, the pane's demand: asked for
+  (`SearchPanelsSettings.area`), and its search naming a book, an author, a person or a topic, or linking to sources, a
+  search that names nothing closing it once it is no longer loading and `SETTLE_MS` passed, so that a search on its way
+  or a source read late does not close and open it again; `SearchAreas` (Metro-injected, one in the app), whether each
+  search tab has its pane open, so that a tab selected again opens it at once.
+- **Reached from:** `ReaderPanes.kt` (`ReaderPane.SearchArea`'s demand and body); `AppGraph.searchAreas`
+  (`SearchAreas`).
+- **Follows:** Zayit's panes (`BookDetailsPane`: `PaneHeader` over the content, the search's view model and actions of
+  the tab, `tabSearchViewModel`, `rememberSearchShellActions`), `LineTopicsPane` (the header's hover), and `SearchTrees`
+  (a tab's state kept by its id, app-scoped).
+- **Tests:** `SearchAreasTest`, `SearchPanelsSettingsUiTest`; tried in the app on the whole library (חנוכה, רבא, מאי
+  חנוכה: in a column beside the passage, dragged under the results and its height dragged, pulled out into a window,
+  docked back, dragged to the left and its width dragged; no pane for a search that names nothing, 2026-11-27).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchAreasTest.kt`
+
+- **Feature:** The search's area pane.
+- **Size:** 18 lines.
+- **What:** each tab's pane open or closed apart.
+- **Reached from:** the JVM tests.
+- **Follows:** `AreaSourcesTest` (pure code, small inline cases), names in backticks as Zayit's.
+- **Tests:** it is one.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/AreaSourcesTest.kt`
 
 - **Feature:** The search's area.
-- **Size:** 33 lines.
-- **What:** the list narrowed to the results that link to a source, in their order; whole without a source; a source as
-  a result of its own line, for the preview.
+- **Size:** 15 lines.
+- **What:** a source as a result of its own line, for the preview.
 - **Reached from:** the JVM tests.
 - **Follows:** `SearchFacetsTest` (pure code, small inline cases), names in backticks as Zayit's.
 - **Tests:** it is one.
@@ -10281,10 +10328,9 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaWindows.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 59 lines.
-- **What:** `SefariaSettings` (`topicsPane`:
-  the reader's pane of the line's topics, one setting for every tab; `searchTopicCard`: the search's topic card, until
-  it is hidden) and
+- **Size:** 55 lines.
+- **What:** `SefariaSettings` (`topicsPane`: the reader's pane of the line's topics, one setting for every tab; the
+  search's topic card had one until the area's pane, 2026-11-27, whose setting is `SearchPanelsSettings.area`) and
   `SefariaWindows` (Metro-injected, one in the app): the topic or sage asked for and `openTopic`/`openSage`, which open
   the tools' windows on it; `SAGE_LINK` and `sageOf(uri)`, the sages' links in the texts.
 - **Reached from:** `AppGraph.sefariaWindows`; `RefLinkUriHandler.kt`, the reader's pane, the search's card.
@@ -10344,15 +10390,16 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/SearchTopicCard.kt`
 
 - **Feature:** Sefaria's content, The search's area.
-- **Size:** 126 lines.
+- **Size:** 106 lines.
 - **What:** `TopicDetails`, the topic a search's query names as the area beside its results shows it: its description,
   its count of sources and the books most of them are in (read off the UI thread), the topics around it, "לדף הנושא"
-  and the credit; `SearchTopicCardButton`, the button in the search's end bar ("נושא") that shows or hides Sefaria's
-  person and topic there (`SefariaSettings.searchTopicCard`). The card of its own it was until 2026-11-27 is the area's.
-- **Reached from:** `SearchArea.kt`; `VerticalBars.kt` (its button).
+  (Jewel's `DefaultButton`, in the accent's gold, as Zayit's panel has "לדף המחבר" and the sage's card "לדף החכם",
+  since the user's word of 2026-11-27: "תואם לשפת העיצוב של זית? לא צריך צבע זהב?") and the credit. The card of its own it was until 2026-11-27 is the area's, and its button in the search's end bar the
+  area's pane's (`SearchAreaPaneButton`).
+- **Reached from:** `SearchArea.kt`.
 - **Follows:** Zayit's `EntityPanel` (the panel of a book or an author the query names), whose look it takes.
-- **Tests:** `SearchPanelsSettingsUiTest` (shown as its setting is, and its button); tried in the app (קריאת שמע, רבא,
-  ברכת כהנים).
+- **Tests:** `SearchPanelsSettingsUiTest` (the topic the query names, in a column and beside the sources); tried in
+  the app (קריאת שמע, רבא, ברכת כהנים, חנוכה).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/SageLinks.kt`
 
@@ -10443,36 +10490,41 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 - **Follows:** `VerseQuotesTest` beside it.
 - **Tests:** it is one (unit).
 
-### The cards beside a search's results, shown or hidden from the search's bar
+### The search's area in a pane, shown or hidden from the search's bar
 
-The panel of the book or the author a search's query names, and the topic it names, each shown or hidden from its
-button in the search's end bar, as the reader's panes are from theirs: the user's words on the testers' builds of
-Sefaria's content (2026-11-26), "צריך אפשרות להסתיר את הדברים הללו בתוצאות חיפוש כמו בשאר המקומות", then "עדיף פשוט
-שיהיה את המתג בסרגל השמאלי". Hooks: `SearchResultScreen.kt`, `VerticalBars.kt`, `strings.xml`; `SearchTopicCard.kt`,
-Pardes's own.
+The area beside a search's results (the search's area, above) in a pane of the reader's dock, which the reader moves to
+any side, sizes and pulls out into a window of its own, shown or hidden from one button in the search's end bar, as the
+reader's panes are from theirs: the user's words on the testers' builds of Sefaria's content (2026-11-26), "צריך
+אפשרות להסתיר את הדברים הללו בתוצאות חיפוש כמו בשאר המקומות", then "עדיף פשוט שיהיה את המתג בסרגל השמאלי", and on
+build 87 (2026-11-27) "שיוכלו לשלוט בגובה ומיקום חלונית הנושאים", in Zayit's design language: two buttons, one for the book or author panel and one for
+Sefaria's topic, until then. The pane itself is the area's section's (`SearchAreaPane.kt`). Hooks: `ReaderPanes.kt`,
+`VerticalBars.kt`, `BookContentEvent.kt`, `BookContentViewModel.kt`, `AppGraph.kt`, `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettings.kt`
 
-- **Feature:** The search's cards shown or hidden.
-- **Size:** 39 lines.
-- **What:** `SearchPanelsSettings` (`entity`: the book or author panel beside a search's results, on until turned off,
-  one setting for every search tab) and `SearchEntityPanelButton`, its button in the search's end bar ("ספר/מחבר",
-  Zayit's unused `Manage_search` icon), lit while the panel shows.
-- **Reached from:** `SearchResultScreen.kt` (the panel's condition), `VerticalBars.kt` (the button).
+- **Feature:** The search's area pane.
+- **Size:** 40 lines.
+- **What:** `SearchPanelsSettings` (`area`: the pane of the area beside a search's results, on until turned off, one
+  setting for every search tab) and `SearchAreaPaneButton`, its button in the search's end bar ("על החיפוש", Zayit's
+  `Contextual_token` icon, the topics' pane's), lit while the pane is asked for. Until 2026-11-27 it held `entity` and
+  the button of the book or author panel, beside `SefariaSettings.searchTopicCard` and its button; one pane has one.
+- **Reached from:** `SearchAreaPane.kt` (the pane's demand), `BookContentViewModel.kt` (`ToggleSearchArea`, the pane's
+  own hide), `VerticalBars.kt` (the button).
 - **Follows:** Zayit's end bar buttons (`SelectableIconButtonWithToolip`, as "פרטי הספר" over the book details' setting).
 - **Tests:** `SearchPanelsSettingsUiTest`.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettingsUiTest.kt`
 
-- **Feature:** The search's cards shown or hidden, The search's area.
-- **Size:** 133 lines.
-- **What:** the area's topic shown while its setting is on, gone while it is off; a source of the results shown alone
-  in the area, with its text, its place showing it and its count narrowing the results to it; the bar's two buttons
-  turning the cards' settings off and on.
+- **Feature:** The search's area pane, The search's area.
+- **Size:** 128 lines.
+- **What:** the area shows the topic its query names; a source of the results shown alone in the area, with its text,
+  a click on its place or its text showing it, and no count of its books; a wide pane, as docked under the results, shows what
+  the query names beside the sources, the sources on its far side; the bar's button turning the pane's setting off and
+  on.
 - **Reached from:** the JVM tests.
 - **Follows:** `DictionaryWindowUiTest` (the real graph in a desktop Compose UI test), names in backticks as Zayit's.
 - **Tests:** it is one (UI).
-- **Notes:** it writes the real graph's settings, the machine's own: both cards on for each test, and the values they
+- **Notes:** it writes the real graph's setting, the machine's own: the pane asked for in each test, and the value it
   had put back after it.
 
 ### A selection dragged past a row's end (a fix of Compose's code)

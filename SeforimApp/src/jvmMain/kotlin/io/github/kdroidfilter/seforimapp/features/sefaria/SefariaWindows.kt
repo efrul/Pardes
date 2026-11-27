@@ -12,13 +12,9 @@ import io.github.kdroidfilter.seforimapp.features.sefaria.sages.SagesTool
 import io.github.kdroidfilter.seforimapp.features.sefaria.topics.TopicsTool
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 
-/**
- * Whether the reader shows the topics of its line in a pane beside the text (LineTopicsPane), one setting for every
- * tab; and whether a search shows the topic its query names beside its results (SearchTopicCard), until it is hidden.
- */
+/** Whether the reader shows the topics of its line in a pane beside the text (LineTopicsPane), one setting for every tab. */
 object SefariaSettings : SettingsGroup("sefaria") {
     val topicsPane by boolean(false)
-    val searchTopicCard by boolean(true)
 }
 
 /**

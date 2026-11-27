@@ -977,10 +977,6 @@
     <string name="search_area_sefaria_credit">מתוך החכמים והנושאים של ספריא</string>
     <string name="search_area_sources">מקורות שהתוצאות מפנות אליהם</string>
     <string name="search_area_sources_page">לפי %1$d התוצאות הראשונות</string>
-    <string name="search_area_source_books">%1$d ספרים</string>
-    <string name="search_area_source_books_tip">%1$d ספרים מבין עשרים התוצאות הראשונות מקושרים למקור הזה. לחיצה מציגה רק את התוצאות האלה.</string>
-    <string name="search_area_linked">רק %2$d התוצאות שמפנות אל %1$s</string>
-    <string name="search_area_linked_all">כל התוצאות</string>
     <string name="search_tab_all">הכל</string>
     <string name="search_book_details">פרטי הספר</string>
     <string name="search_back_to_all">→ חזרה לכל התוצאות (מוצגות התוצאות מ%1$s)</string>
@@ -1385,9 +1381,7 @@
     <string name="sefaria_mark_story">סמן את הסיפור</string>
     <string name="sefaria_copy_story">העתק את הסיפור</string>
 
-    <!-- Pardes: the cards beside a search's results, shown or hidden from the search's end bar (features/search/SearchPanelsSettings.kt) -->
-    <string name="search_card_entity">ספר/מחבר</string>
-    <string name="search_card_entity_tooltip">הצג ליד התוצאות את הספר או המחבר שחיפשת</string>
-    <string name="search_card_topic">נושא</string>
-    <string name="search_card_topic_tooltip">הצג ליד התוצאות את הנושא שחיפשת, מספריא</string>
+    <!-- Pardes: the pane of the area beside a search's results, shown or hidden from the search's end bar (features/search/SearchPanelsSettings.kt, area/SearchAreaPane.kt) -->
+    <string name="search_area_pane">על החיפוש</string>
+    <string name="search_area_pane_tooltip">הצג בחלונית את מה שחיפשת, ספר, מחבר, חכם או נושא, ואת המקורות שהתוצאות מפנות אליהם. את החלונית אפשר לגרור לכל צד, להגדיל ולפתוח בחלון נפרד</string>
 </resources>

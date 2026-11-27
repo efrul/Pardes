@@ -1,20 +1,20 @@
 package io.github.kdroidfilter.seforimapp.features.search
 
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import androidx.compose.ui.unit.LayoutDirection
 import io.github.kdroidfilter.seforimapp.features.search.area.SearchArea
-import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
-import io.github.kdroidfilter.seforimapp.features.sefaria.topics.SearchTopicCardButton
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.search.CommonSource
 import io.github.kdroidfilter.seforimapp.testAppGraph
@@ -27,27 +27,23 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** The area beside a search's results, its topic shown or hidden from the buttons of the search's end bar. */
+/** The area beside a search's results, as its pane shows it, and the end bar's button of the pane. */
 @OptIn(ExperimentalTestApi::class)
 class SearchPanelsSettingsUiTest {
     private val graph by lazy { testAppGraph() }
 
-    // The real graph's settings, the machine's own: both cards shown for the test, as they were after it
-    private var before: Pair<Boolean, Boolean>? = null
+    // The real graph's setting, the machine's own: the pane asked for in the test, as it was after it
+    private var before: Boolean? = null
 
     @BeforeTest
-    fun showThem() {
-        before = graph.appSettings[SearchPanelsSettings.entity] to graph.appSettings[SefariaSettings.searchTopicCard]
-        graph.appSettings[SearchPanelsSettings.entity] = true
-        graph.appSettings[SefariaSettings.searchTopicCard] = true
+    fun askForIt() {
+        before = graph.appSettings[SearchPanelsSettings.area]
+        graph.appSettings[SearchPanelsSettings.area] = true
     }
 
     @AfterTest
-    fun putThemBack() {
-        before?.let { (entity, topic) ->
-            graph.appSettings[SearchPanelsSettings.entity] = entity
-            graph.appSettings[SefariaSettings.searchTopicCard] = topic
-        }
+    fun putItBack() {
+        before?.let { graph.appSettings[SearchPanelsSettings.area] = it }
     }
 
     private fun ComposeUiTest.show(content: @Composable () -> Unit) =
@@ -62,72 +58,71 @@ class SearchPanelsSettingsUiTest {
     private fun ComposeUiTest.cards() = onAllNodesWithText(OPEN_PAGE).fetchSemanticsNodes().size
 
     @Test
-    fun `the area's topic shows while its setting is on`() =
-        runDesktopComposeUiTest(width = 640, height = 520) {
+    fun `the area shows the topic its query names`() =
+        runDesktopComposeUiTest(width = 360, height = 640) {
             show {
                 SearchArea(
                     "קריאת שמע",
                     entity = null,
                     sources = persistentListOf(),
                     onShowSource = {},
-                    onNarrowResults = {},
                 ) { _, _ -> }
             }
             // Sefaria's topics are read off the UI thread at first
             waitUntil(timeoutMillis = LOADING_MS) { cards() == 1 }
-            graph.appSettings[SefariaSettings.searchTopicCard] = false
-            waitForIdle()
-            onAllNodesWithText(OPEN_PAGE).assertCountEquals(0)
-            graph.appSettings[SefariaSettings.searchTopicCard] = true
-            waitUntil(timeoutMillis = LOADING_MS) { cards() == 1 }
         }
 
     @Test
-    fun `a source of the results shows alone, with its text, its place showing it and its count its results`() =
+    fun `a source of the results shows alone with its text, and a click on it shows it, without a count`() =
         runDesktopComposeUiTest(width = 640, height = 320) {
-            val source = CommonSource(2045, 2, "שמות טז, כט", 4, "רְאוּ כִּי יְהֹוָה נָתַן לָכֶם הַשַּׁבָּת", from = listOf(11, 12))
-            var shown: CommonSource? = null
-            var linked: CommonSource? = null
+            val shown = mutableListOf<CommonSource>()
             show {
-                SearchArea("zzz", entity = null, sources = persistentListOf(source), onShowSource = { shown = it }, onNarrowResults = {
-                    linked =
-                        it
-                }) {
-                    _,
-                    _,
-                    ->
-                }
+                SearchArea("zzz", entity = null, sources = persistentListOf(SOURCE), onShowSource = { shown += it }) { _, _ -> }
             }
             waitForIdle()
-            onNodeWithText(source.text).assertExists()
-            onNodeWithText(source.label).performClick()
-            assertEquals(source, shown)
-            onNodeWithText("4 ספרים").performClick()
-            assertEquals(source, linked)
+            onNodeWithText(SOURCE.label).performClick()
+            // Its text too: the whole source is a link to it, as a result is
+            onNodeWithText(SOURCE.text).performClick()
+            assertEquals(listOf(SOURCE, SOURCE), shown)
+            onAllNodesWithText("4 ספרים").assertCountEquals(0)
         }
 
     @Test
-    fun `the bar's buttons hide and show the cards`() =
-        runDesktopComposeUiTest(width = 200, height = 400) {
+    fun `a wide pane shows what the query names beside the sources, the sources on its far side`() =
+        runDesktopComposeUiTest(width = 1200, height = 320) {
             show {
-                Column {
-                    SearchEntityPanelButton()
-                    SearchTopicCardButton()
-                }
+                SearchArea(
+                    "קריאת שמע",
+                    entity = null,
+                    sources = persistentListOf(SOURCE),
+                    onShowSource = {},
+                    modifier = Modifier.fillMaxSize(),
+                    wide = true,
+                ) { _, _ -> }
             }
-            onNodeWithText("ספר/מחבר").performClick()
+            waitUntil(timeoutMillis = LOADING_MS) { cards() == 1 }
+            // Right to left: what the query names first, at the right; the sources at the left of it
+            val named = onNodeWithText(OPEN_PAGE).getBoundsInRoot()
+            val source = onNodeWithText(SOURCE.label).getBoundsInRoot()
+            assertTrue(source.right <= named.left, "the source at ${source.right}, what the query names from ${named.left}")
+        }
+
+    @Test
+    fun `the bar's button hides and shows the area's pane`() =
+        runDesktopComposeUiTest(width = 200, height = 200) {
+            show { SearchAreaPaneButton() }
+            onNodeWithText(PANE).performClick()
             waitForIdle()
-            assertFalse(graph.appSettings[SearchPanelsSettings.entity])
-            onNodeWithText("ספר/מחבר").performClick()
+            assertFalse(graph.appSettings[SearchPanelsSettings.area])
+            onNodeWithText(PANE).performClick()
             waitForIdle()
-            assertTrue(graph.appSettings[SearchPanelsSettings.entity])
-            onNodeWithText("נושא").performClick()
-            waitForIdle()
-            assertFalse(graph.appSettings[SefariaSettings.searchTopicCard])
+            assertTrue(graph.appSettings[SearchPanelsSettings.area])
         }
 
     private companion object {
         const val OPEN_PAGE = "לדף הנושא"
+        const val PANE = "על החיפוש"
         const val LOADING_MS = 30_000L
+        val SOURCE = CommonSource(2045, 2, "שמות טז, כט", 4, "רְאוּ כִּי יְהֹוָה נָתַן לָכֶם הַשַּׁבָּת", from = listOf(11, 12))
     }
 }

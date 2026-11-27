@@ -4,18 +4,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -37,12 +38,10 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
 import io.github.kdroidfilter.seforimapp.features.search.readingSecondary
 import io.github.kdroidfilter.seforimapp.features.sefaria.Sage
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSages
-import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaTopics
 import io.github.kdroidfilter.seforimapp.features.sefaria.Topic
 import io.github.kdroidfilter.seforimapp.features.sefaria.generationLabel
 import io.github.kdroidfilter.seforimapp.features.sefaria.topics.TopicDetails
-import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.search.CommonSource
 import io.github.kdroidfilter.seforimapp.icons.Book
 import io.github.kdroidfilter.seforimapp.icons.BootstrapPersonLines
@@ -67,13 +66,14 @@ import seforimapp.seforimapp.generated.resources.search_area_sefaria_credit
 import seforimapp.seforimapp.generated.resources.search_area_topic_sources
 
 /**
- * Pardes: the area at the top of the passage's pane beside a search's results (the design's ד with ב, the user's
- * choice of 2026-11-27): what the query names, a book, an author, a person or a topic of Sefaria's, one person's faces
- * together (SearchFacets), the first in full and the others on its "also" line, where a click shows one in full; then
- * the sources the first results link to (docs/COMMON_SOURCES_PLAN.md), each with its text, shown in the preview by a
- * click ([onShowSource]), its count narrowing the results to those that link to it ([onNarrowResults]). A book or an author is shown
- * in Zayit's panel ([panel]), with the rest of the area inside it. Nothing when the query names nothing and no source is
- * common to its results.
+ * Pardes: the area beside a search's results (the design's ד with ב, the user's choice of 2026-11-27), in its pane of the
+ * dock (SearchAreaPane.kt): what the query names, a book, an author, a person or a topic of Sefaria's, one person's faces
+ * together (SearchFacets), the first in full and the others on its "also" line, where a click shows one in full; then the
+ * sources the first results link to (docs/COMMON_SOURCES_PLAN.md), each with its text, shown in the preview by a click
+ * ([onShowSource]), as a result is. A book or an author is shown in Zayit's panel ([panel]), with the rest of the area
+ * inside it. One column that scrolls; [wide], as docked under
+ * the results, what the query names beside the sources, each scrolling on its own. Nothing when the query names nothing
+ * and no source is common to its results.
  */
 @Composable
 fun SearchArea(
@@ -81,49 +81,69 @@ fun SearchArea(
     entity: SearchEntity?,
     sources: ImmutableList<CommonSource>,
     onShowSource: (CommonSource) -> Unit,
-    onNarrowResults: (CommonSource) -> Unit,
     modifier: Modifier = Modifier,
+    wide: Boolean = false,
     panel: @Composable (entity: SearchEntity, extra: @Composable ColumnScope.() -> Unit) -> Unit,
 ) {
-    val appSettings = LocalAppGraph.current.appSettings
-    // The topic and the person of Sefaria's, shown or hidden from the search's end bar (SearchTopicCardButton)
-    val sefariaShown by appSettings.flow(SefariaSettings.searchTopicCard).collectAsState()
-    val named by produceState<SefariaNamed?>(null, query, sefariaShown) {
-        value = if (sefariaShown) withContext(Dispatchers.Default) { SefariaNamed.of(query.trim()) } else null
+    val named by produceState<SefariaNamed?>(null, query) {
+        value = withContext(Dispatchers.Default) { SefariaNamed.of(query.trim()) }
     }
     val entities = remember(query, entity, named) { SearchFacets.entities(facetsOf(query, entity, named)).toImmutableList() }
     // The entity shown in full, picked on the "also" line; the first until one is
     var picked by remember(entities) { mutableStateOf<Facet?>(null) }
     val shown = entities.firstOrNull { it.main == picked } ?: entities.firstOrNull()
-    val rest: @Composable ColumnScope.() -> Unit = {
+    val also: @Composable ColumnScope.() -> Unit = {
         AlsoLine(entities.filter { it != shown }.toImmutableList(), entity, named) { picked = it.main }
-        SourcesPart(sources, onShowSource, onNarrowResults, first = shown == null)
     }
-    Box(modifier) {
+    // What the query names, in Zayit's panel or in a card as it, with [extra] inside it
+    val namedPart: (@Composable (extra: @Composable ColumnScope.() -> Unit) -> Unit)? =
         when {
-            shown == null -> if (sources.isNotEmpty()) AreaCard(rest)
-            entity != null && shown.main.kind in ZAYIT_KINDS ->
+            shown == null -> null
+            entity != null && shown.main.kind in ZAYIT_KINDS -> { extra ->
                 panel(entity) {
                     PersonFacets(shown, named)
-                    rest()
+                    extra()
                 }
-            else ->
+            }
+            else -> { extra ->
                 AreaCard {
                     SefariaEntity(shown, named)
-                    rest()
+                    extra()
                 }
+            }
+        }
+    if (wide && namedPart != null && sources.isNotEmpty()) {
+        Row(modifier) {
+            Column(Modifier.weight(NAMED_SHARE).fillMaxHeight().verticalScroll(rememberScrollState())) { namedPart(also) }
+            Column(Modifier.weight(1f - NAMED_SHARE).fillMaxHeight().verticalScroll(rememberScrollState())) {
+                AreaCard { SourcesPart(sources, onShowSource, first = true) }
+            }
+        }
+    } else {
+        val rest: @Composable ColumnScope.() -> Unit = {
+            also()
+            SourcesPart(sources, onShowSource, first = namedPart == null)
+        }
+        Column(modifier.verticalScroll(rememberScrollState())) {
+            when {
+                namedPart != null -> namedPart(rest)
+                sources.isNotEmpty() -> AreaCard(rest)
+            }
         }
     }
 }
 
 /** The person and the topic of Sefaria's a query names, with the data they are read from. */
 @Immutable
-private class SefariaNamed(
+internal class SefariaNamed(
     val sages: SefariaSages,
     val topics: SefariaTopics,
     val sage: Sage?,
     val topic: Topic?,
 ) {
+    /** Whether the query names a person or a topic of Sefaria's. */
+    val any: Boolean get() = sage != null || topic != null
+
     companion object {
         fun of(query: String): SefariaNamed {
             val sages = SefariaSages.shipped
@@ -275,3 +295,6 @@ private fun pillOf(
 
 // The kinds Zayit's panel shows
 private val ZAYIT_KINDS = setOf(FacetKind.BOOK, FacetKind.AUTHOR)
+
+// What the query names takes this share of the width beside the sources, as docked under the results
+private const val NAMED_SHARE = 0.46f
