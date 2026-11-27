@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +61,7 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetSettings
 import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetTitle
 import io.github.kdroidfilter.seforimapp.features.home.widgets.rememberAccentColor
 import io.github.kdroidfilter.seforimapp.features.sefaria.KrupnikDictionary
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaData
 import io.github.kdroidfilter.seforimapp.framework.di.AppGraph
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.logger.infoln
@@ -274,6 +276,15 @@ private val cache = ConcurrentHashMap<Dictionary, List<DictionaryEntry>>()
 // Two windows showing the card read each dictionary once: the second one waits, then finds it in the cache
 private val reading = Mutex()
 
+// Pardes: Krupnik's entries are Sefaria's pack's, which is put in place or taken out while the app runs (SefariaPack):
+// they are kept for the data's revision they were read at, and read again once it moved on (SefariaData.revision)
+@Volatile
+private var krupnikRevision = 0
+
+private fun forgetStaleKrupnik() {
+    if (krupnikRevision != SefariaData.revision.value) cache.remove(Dictionary.KRUPNIK)
+}
+
 /** [dictionaries] as read so far, or null while one of them is still to be read. */
 private fun cached(dictionaries: List<Dictionary>): Map<Dictionary, List<DictionaryEntry>>? =
     dictionaries.associateWith { cache[it] ?: return null }
@@ -284,6 +295,8 @@ internal suspend fun readDictionaries(
     dictionaries: List<Dictionary>,
 ): Map<Dictionary, List<DictionaryEntry>> =
     reading.withLock {
+        // Pardes: Krupnik's read again once Sefaria's pack was put in place or taken out
+        forgetStaleKrupnik()
         dictionaries
             .mapNotNull { dictionary ->
                 cache[dictionary]?.let { return@mapNotNull dictionary to it }
@@ -296,7 +309,8 @@ internal suspend fun readDictionaries(
                                 dictionary.textEntries(
                                     // Pardes: Krupnik's is Sefaria's text, the others Klei Kodesh's data
                                     if (dictionary == Dictionary.KRUPNIK) {
-                                        KrupnikDictionary.shipped
+                                        krupnikRevision = SefariaData.revision.value
+                                        KrupnikDictionary.entries()
                                     } else {
                                         KleiKodeshPack.shipped.texts[dictionary].orEmpty()
                                     },
@@ -423,7 +437,9 @@ internal object DictionaryWidget : HomeWidget {
         // Read on first use (the field focused, a dictionary or a random word asked for), not as soon as the Home shows
         var wanted by remember { mutableStateOf(false) }
         var attempt by remember { mutableIntStateOf(0) }
-        val read by produceState(cached(needed), graph, needed, wanted, attempt) {
+        // Pardes: read again once Sefaria's pack is put in place or taken out, for Krupnik's entries
+        val sefaria by SefariaData.revision.collectAsState()
+        val read by produceState(cached(needed), graph, needed, wanted, attempt, sefaria) {
             // Another choice's map would show this one's dictionaries as failed while they're read
             value = cached(needed)
             if (wanted || value != null) value = readDictionaries(graph, needed)

@@ -51,6 +51,8 @@ import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaLine
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaTopics
 import io.github.kdroidfilter.seforimapp.features.sefaria.SourceRow
 import io.github.kdroidfilter.seforimapp.features.sefaria.Topic
+import io.github.kdroidfilter.seforimapp.features.sefaria.pack.SefariaPackHint
+import io.github.kdroidfilter.seforimapp.features.sefaria.rememberSefaria
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -110,7 +112,8 @@ internal object TopicsTool : HomeWidget {
         modifier: Modifier,
     ) {
         val windows = LocalAppGraph.current.sefariaWindows
-        val topics by produceState<SefariaTopics?>(null) { value = withContext(Dispatchers.Default) { SefariaTopics.shipped } }
+        // Pardes: Sefaria's data from its file beside the library (SefariaPack), its download offered while it is missing
+        val read = rememberSefaria { it.topics }
         // The topics opened one from another, the last shown: back goes to the one before
         var trail by remember { mutableStateOf(emptyList<Int>()) }
         // The book the page asked for from outside opens on (the search's area), for that page alone
@@ -125,9 +128,9 @@ internal object TopicsTool : HomeWidget {
         }
         val accent = rememberAccentColor(JewelTheme.isDark)
         PanelCard(modifier) {
-            val loaded = topics
             // Still loading, as the other widgets' loading card: its tag is what the size test waits for
-            if (loaded == null) return@PanelCard CircularProgressIndicator(Modifier.align(Alignment.Center).testTag(WIDGET_LOADING_TAG))
+            if (read == null) return@PanelCard CircularProgressIndicator(Modifier.align(Alignment.Center).testTag(WIDGET_LOADING_TAG))
+            val loaded = read.value ?: return@PanelCard SefariaPackHint(Modifier.align(Alignment.Center))
             Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 val page = trail.lastOrNull()
                 when {
@@ -291,14 +294,18 @@ private fun TopicPage(
 ) {
     val topic = topics.topics[id] ?: return BackTitle("", accent, onBack)
     val graph = LocalAppGraph.current
-    val heRefs = remember(topics, id) { topics.sourcesOf(id) }
-    val lines by produceState<Map<String, SefariaLine>?>(null, id) { value = graph.sefariaLines.linesOf(heRefs) }
+    // Its sources read from the file, off the UI thread, then their lines in the library; null while they are read
+    val sources by produceState<Pair<List<String>, Map<String, SefariaLine>>?>(null, topics, id) {
+        value = null
+        val heRefs = withContext(Dispatchers.IO) { topics.sourcesOf(id) }
+        value = heRefs to graph.sefariaLines.linesOf(heRefs)
+    }
     val opened = remember(id, book) { mutableStateListOf<String>().apply { book?.let(::add) } }
     // Each page from its top, or from the book it was asked for
     val list = remember(id, book) { LazyListState() }
     // The book asked for at the page's top once its sources are read: after the description and the count
-    LaunchedEffect(lines, book) {
-        val found = lines ?: return@LaunchedEffect
+    LaunchedEffect(sources, book) {
+        val (heRefs, found) = sources ?: return@LaunchedEffect
         val at =
             heRefs
                 .mapNotNull(found::get)
@@ -312,10 +319,11 @@ private fun TopicPage(
         if (topic.description.isNotEmpty()) {
             item { Text(topic.description, fontSize = 14.sp, lineHeight = 22.sp, color = JewelTheme.globalColors.text.normal) }
         }
-        val found = lines
-        if (found == null) {
+        val read = sources
+        if (read == null) {
             item { Text(stringResource(Res.string.sefaria_loading), fontSize = 12.sp, color = JewelTheme.globalColors.text.info) }
         } else {
+            val (heRefs, found) = read
             val books = heRefs.mapNotNull(found::get).groupBy { it.bookTitle }
             item {
                 Text(

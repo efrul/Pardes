@@ -3,7 +3,7 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.quotelinks
 import io.github.kdroidfilter.seforimapp.catalog.CatalogPresets
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.LibraryLinks
 import io.github.kdroidfilter.seforimapp.features.sefaria.Mention
-import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSages
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaData
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaWindows
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 
@@ -29,7 +29,8 @@ internal class SageLinks(
         lines: List<Line>,
         linesByIds: suspend (Collection<Long>) -> List<Line>,
     ): List<Line> {
-        val sages = SefariaSages.shipped
+        // Pardes: none while the library's folder has no file of Sefaria's data (SefariaPack)
+        val sages = SefariaData.current()?.sages ?: return lines
         return lines.map { line ->
             val mentions = line.heRef?.let(sages::at).orEmpty()
             if (mentions.isEmpty()) return@map line

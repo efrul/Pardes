@@ -53,6 +53,7 @@ import io.github.kdroidfilter.seforimapp.features.database.update.DatabaseUpdate
 import io.github.kdroidfilter.seforimapp.features.home.widgets.ToolWindowsHost
 import io.github.kdroidfilter.seforimapp.features.onboarding.OnBoardingWindow
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSemanticPack
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaData
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindow
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowViewModel
@@ -223,6 +224,8 @@ fun main(args: Array<String>) {
                 createGraph<AppGraph>().also {
                     it.crashReporting.start()
                     TextLinks.library = it.libraryLinks
+                    // Pardes: where Sefaria's data is, beside the library (SefariaPack)
+                    SefariaData.appSettings = it.appSettings
                     if (pendingLibraryMove == null) warmCatalog(it)
                 }
             }

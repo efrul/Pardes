@@ -21,6 +21,11 @@ import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaTopics
 import io.github.kdroidfilter.seforimapp.features.sefaria.Topic
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.icons.Contextual_token
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.DefaultButton
@@ -44,8 +49,9 @@ internal fun ColumnScope.TopicDetails(
     topics: SefariaTopics,
 ) {
     val graph = LocalAppGraph.current
-    val books by produceState(emptyList<Pair<String, Int>>(), topic.id) {
-        val lines = graph.sefariaLines.linesOf(topics.sourcesOf(topic.id))
+    // Its sources read from the file, off the UI thread, then their books in the library
+    val books by produceState<ImmutableList<Pair<String, Int>>>(persistentListOf(), topics, topic.id) {
+        val lines = graph.sefariaLines.linesOf(withContext(Dispatchers.IO) { topics.sourcesOf(topic.id) })
         value =
             lines.values
                 .groupingBy { it.bookTitle }
@@ -53,6 +59,7 @@ internal fun ColumnScope.TopicDetails(
                 .entries
                 .sortedByDescending { it.value }
                 .map { it.key to it.value }
+                .toImmutableList()
     }
     val related =
         remember(topics, topic.id) {
@@ -80,27 +87,7 @@ internal fun ColumnScope.TopicDetails(
         )
     }
     val windows = graph.sefariaWindows
-    if (books.isNotEmpty()) {
-        Text(
-            stringResource(Res.string.sefaria_topic_sources_in_books, topics.sourceCount(topic.id), books.size),
-            fontSize = 13.sp,
-            color = grey,
-        )
-        // Each book a link to the topic's page on its sources, as the parts of Zayit's book details are; the others to
-        // the page
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            books.take(TOP_BOOKS).forEach { (book, count) ->
-                ResultLink("$book $count", accent, 13.sp) { windows.openTopic(topic.id, book) }
-            }
-            if (books.size > TOP_BOOKS) {
-                ResultLink(
-                    stringResource(Res.string.sefaria_topic_more, books.size - TOP_BOOKS),
-                    grey,
-                    13.sp,
-                ) { windows.openTopic(topic.id) }
-            }
-        }
-    }
+    if (books.isNotEmpty()) TopicBooks(topics.sourceCount(topic.id), books) { book -> windows.openTopic(topic.id, book) }
     // Each topic around it a link to its own page
     if (related.isNotEmpty()) {
         FlowRow(
@@ -115,6 +102,28 @@ internal fun ColumnScope.TopicDetails(
     // The way to its page, as Zayit's panel has it to an author's (DefaultButton, the accent's) and the sage's card
     DefaultButton(onClick = { windows.openTopic(topic.id) }) { Text(stringResource(Res.string.sefaria_topic_open_page)) }
     Text(stringResource(Res.string.sefaria_topics_credit), fontSize = 11.sp, color = grey)
+}
+
+/**
+ * A topic's count of [sources] and the [books] most of them are in, each a link to the topic's page on its sources, as
+ * the parts of Zayit's book details are ([onOpen] with the book); the others to the page ([onOpen] with none).
+ */
+@Composable
+private fun ColumnScope.TopicBooks(
+    sources: Int,
+    books: ImmutableList<Pair<String, Int>>,
+    onOpen: (book: String?) -> Unit,
+) {
+    val grey = readingSecondary()
+    Text(stringResource(Res.string.sefaria_topic_sources_in_books, sources, books.size), fontSize = 13.sp, color = grey)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        books.take(TOP_BOOKS).forEach { (book, count) ->
+            ResultLink("$book $count", JewelTheme.globalColors.outlines.focused, 13.sp) { onOpen(book) }
+        }
+        if (books.size > TOP_BOOKS) {
+            ResultLink(stringResource(Res.string.sefaria_topic_more, books.size - TOP_BOOKS), grey, 13.sp) { onOpen(null) }
+        }
+    }
 }
 
 private const val DESCRIPTION_LINES = 4

@@ -27,22 +27,30 @@ object CommonSources {
     /** The first results, never a source: they are seen already. */
     const val SKIP = 3
 
-    /** The books of the page a source is linked from, at least. */
+    /** The books of the page a source is linked from, at least, while a line is. */
     const val MIN_BOOKS = 3
+
+    /**
+     * The results a source is linked from, at least, when no line is linked from [MIN_BOOKS] books of the page; when none
+     * is linked from as many, any line a result links to: a search in one book or in few has its sources too (the user's
+     * word of 2026-11-27, a source whatever the search is limited to).
+     */
+    const val MIN_RESULTS = 2
 
     /** The sources shown, at most. */
     const val SHOWN = 3
 
     /**
      * The sources of [page] (the first [PAGE] results as (lineId, bookId), in the engine's order) from their [links],
-     * both directions: the most books first, then a base book, then by [rank] (the place in the page), then by id;
-     * those linked from half the first's books or more. In a base books' search ([baseOnly]) only lines of [baseBooks].
+     * both directions, lines of any book: those linked from [MIN_BOOKS] books, the most books first, then a base book
+     * ([baseBooks]), then by [rank] (the place in the page), then by id, as measured; without one, those linked from
+     * [MIN_RESULTS] results, else any line a result links to, the most books first, then a base book, then the most
+     * results, then the earliest result linking to it. Those linked from half the first's books or more.
      */
     fun pick(
         page: List<Pair<Long, Long>>,
         links: List<LinkEnd>,
         baseBooks: Set<Long>,
-        baseOnly: Boolean,
         rank: (Long) -> Int = { line -> page.indexOfFirst { it.first == line }.let { if (it < 0) page.size else it } },
     ): List<CommonSourcePick> {
         val bookOf = page.toMap()
@@ -57,12 +65,27 @@ object CommonSources {
             }
         }
         val place = page.withIndex().associate { (i, result) -> result.first to i }
+        val found =
+            books.map { (line, bs) -> CommonSourcePick(line.first, line.second, bs.size, lines.getValue(line).sortedBy(place::getValue)) }
+        val wide = found.filter { it.books >= MIN_BOOKS }
         val top =
-            books
-                .filter { (line, bs) -> bs.size >= MIN_BOOKS && (!baseOnly || line.second in baseBooks) }
-                .map { (line, bs) -> CommonSourcePick(line.first, line.second, bs.size, lines.getValue(line).sortedBy(place::getValue)) }
-                .sortedWith(compareBy({ -it.books }, { it.bookId !in baseBooks }, { rank(it.lineId) }, { it.lineId }))
-                .take(SHOWN)
+            if (wide.isNotEmpty()) {
+                wide.sortedWith(compareBy({ -it.books }, { it.bookId !in baseBooks }, { rank(it.lineId) }, { it.lineId }))
+            } else {
+                found
+                    .filter { it.from.size >= MIN_RESULTS }
+                    .ifEmpty { found }
+                    .sortedWith(
+                        compareBy(
+                            { -it.books },
+                            { it.bookId !in baseBooks },
+                            { -it.from.size },
+                            { place.getValue(it.from.first()) },
+                            { rank(it.lineId) },
+                            { it.lineId },
+                        ),
+                    )
+            }.take(SHOWN)
         return top.filter { 2 * it.books >= top.first().books }
     }
 }

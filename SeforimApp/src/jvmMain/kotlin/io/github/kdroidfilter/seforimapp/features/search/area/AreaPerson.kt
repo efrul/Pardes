@@ -38,6 +38,8 @@ import io.github.kdroidfilter.seforimapp.icons.Contextual_token
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.DefaultButton
@@ -141,12 +143,12 @@ private fun ColumnScope.Mentions(
     sages: SefariaSages,
 ) {
     val lines = LocalAppGraph.current.sefariaLines
-    val places = remember(sages, sage.id) { sages.placesOf(sage.id) }
-    if (places.isEmpty()) return
-    val books by produceState<ImmutableList<Pair<String, Int>>>(persistentListOf(), places) {
+    val mentions = sages.placeCount(sage.id)
+    if (mentions == 0) return
+    val books by produceState<ImmutableList<Pair<String, Int>>>(persistentListOf(), sages, sage.id) {
         value =
             lines
-                .linesOf(places)
+                .linesOf(withContext(Dispatchers.IO) { sages.placesOf(sage.id) })
                 .values
                 .groupingBy { it.bookTitle }
                 .eachCount()
@@ -156,7 +158,7 @@ private fun ColumnScope.Mentions(
                 .map { it.key to it.value }
                 .toImmutableList()
     }
-    val count = remember(places) { NumberFormat.getIntegerInstance().format(places.size) }
+    val count = remember(mentions) { NumberFormat.getIntegerInstance().format(mentions) }
     Text(
         stringResource(Res.string.search_area_sage_mentions, count),
         fontSize = 12.sp,

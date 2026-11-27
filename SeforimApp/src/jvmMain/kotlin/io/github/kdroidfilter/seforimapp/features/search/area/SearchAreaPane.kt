@@ -27,6 +27,7 @@ import io.github.kdroidfilter.seforimapp.features.search.EntityPanel
 import io.github.kdroidfilter.seforimapp.features.search.SearchPanelsSettings
 import io.github.kdroidfilter.seforimapp.features.search.SearchResultViewModel
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaData
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.search.CommonSource
@@ -101,8 +102,9 @@ fun rememberSearchAreaShown(
     if (!asked) return false
     val content = rememberAreaContent(tabSearchViewModel(owner, destination))
     val query = content.query.trim()
-    val named by produceState(false, query) {
-        value = query.isNotEmpty() && withContext(Dispatchers.Default) { SefariaNamed.of(query).any }
+    val revision by SefariaData.revision.collectAsState()
+    val named by produceState(false, query, revision) {
+        value = query.isNotEmpty() && withContext(Dispatchers.IO) { SefariaNamed.of(query)?.any == true }
     }
     val has = content.entity != null || named || content.sources.isNotEmpty()
     val areas = graph.searchAreas
