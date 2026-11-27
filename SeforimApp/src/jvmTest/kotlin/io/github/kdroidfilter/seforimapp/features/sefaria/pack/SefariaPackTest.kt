@@ -1,9 +1,13 @@
 package io.github.kdroidfilter.seforimapp.features.sefaria.pack
 
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafDownloads
+import io.github.kdroidfilter.seforimapp.features.home.widgets.library.Dictionary
+import io.github.kdroidfilter.seforimapp.features.home.widgets.library.readDictionaries
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackReleases
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaData
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaPackBuilder
+import io.github.kdroidfilter.seforimapp.testAppGraph
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -134,6 +138,22 @@ class SefariaPackTest {
         assertNull(SefariaData.current())
         assertFalse(File(dir, SefariaPack.DIR_NAME).exists())
     }
+
+    @Test
+    fun `Krupnik's dictionary is read again once the pack is put in place or taken out`() =
+        runBlocking {
+            val graph = testAppGraph()
+            val krupnik = listOf(Dictionary.KRUPNIK)
+            SefariaData.changed()
+            assertEquals(0, readDictionaries(graph, krupnik).getValue(Dictionary.KRUPNIK).size, "no pack, no entries")
+            // The dictionary card read it before the pack came: it has its entries once the pack is in place
+            SefariaPackBuilder.showRepositoryData()
+            SefariaData.changed()
+            assertTrue(readDictionaries(graph, krupnik).getValue(Dictionary.KRUPNIK).size > 18_000)
+            SefariaPackBuilder.hideData()
+            SefariaData.changed()
+            assertEquals(0, readDictionaries(graph, krupnik).getValue(Dictionary.KRUPNIK).size, "the pack taken out")
+        }
 
     @Test
     fun `a file that is not the manifest's is not put in place`() {

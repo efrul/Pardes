@@ -3167,7 +3167,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWidget.kt`
 
-- **Change:** modified, +189 −23 lines. Feature: Klei Kodesh dictionary, Dictionary window, Sefaria's content.
+- **Change:** modified, +206 −24 lines. Feature: Klei Kodesh dictionary, Dictionary window, Sefaria's content.
 - **What:**
   - `Dictionary` gains a `source` (`BOOK`, `INDEX`, `TEXT`) and an `attribution`, and six entries: four books of the
     library read through Klei Kodesh's index of headwords (מצודת ציון, the Malbim's ביאור המילות, מיקרופדיה תלמודית,
@@ -3188,10 +3188,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
     marks Klei Kodesh's dictionaries ("· כלי קודש").
   - `KRUPNIK`, the last entry, under a comment marked "Pardes:": Krupnik and Silberman's dictionary of the Talmud
     (1927, public domain), a `TEXT` dictionary read from `KrupnikDictionary.entries()` (Sefaria's text, from its pack
-    beside the library: none without it, and, read once for the app's life as the others, none until a restart once
-    the pack is downloaded) in place of
+    beside the library: none without it) in place of
     Klei Kodesh's pack, in `readDictionaries`' `TEXT` branch, and marked "· ספריא" in the options page (a `when` in
-    place of the `if`), with its import.
+    place of the `if`), with its import. Since the pack (2026-11-27), Krupnik's entries are kept for the revision of
+    Sefaria's data they were read at (`krupnikRevision`, set as they are read) and forgotten once it moved on
+    (`forgetStaleKrupnik`, at the top of `readDictionaries`), and the card's read takes `SefariaData.revision` as a key:
+    a card that read Krupnik before the pack was downloaded has its entries as soon as it is, without a restart; three
+    places under comments marked "Pardes:", with their imports.
 - **Why:** more dictionaries and related words in the Home's dictionary card, from Klei Kodesh's Kitvei Hakodesh data
   (`66ae16e8`, `4f86ba1e`, `389f2438`); HaMichlol's definitions were taken out again before release (`f405bb7f`). The
   dictionary opened from the Tools menu is ready to type in, and the reader's menu opens it on a word, as the user asked
@@ -3200,7 +3203,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Merge risk:** medium: Zayit's `readDictionaries` body was moved into `readBook`, so a Zayit change there conflicts.
 - **Smaller:** `readIndexed`, `titleVariants` and `RelatedWords` could move to `KleiKodeshDictionary.kt`; keeping Zayit's
   reading code where it was would avoid the move.
-- **Tests:** `KleiKodeshDictionaryTest`, `KleiKodeshDictionaryE2ETest`, `DictionaryWindowUiTest`, `DictionaryLookupTest`. `SefariaDataTest` (Krupnik's rows, and the repository's in the pack); Krupnik's entry tried in the app (בסורא).
+- **Tests:** `KleiKodeshDictionaryTest`, `KleiKodeshDictionaryE2ETest`, `DictionaryWindowUiTest`, `DictionaryLookupTest`. `SefariaDataTest` (Krupnik's rows, and the repository's in the pack), `SefariaPackTest` (Krupnik read again once the pack is put in place or taken out); Krupnik's entry tried in the app (בסורא).
 - **Notes:** the attributions and the "· כלי קודש" mark are Hebrew literals in Kotlin, as the file's dictionary labels
   already were in Zayit; ktlint left one `if (kind ==` broken over three lines.
 
@@ -10575,11 +10578,12 @@ and offers again once a newer one is out (`pack/`, `sefaria-release.yml`, the us
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/pack/SefariaPackTest.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 162 lines.
+- **Size:** 182 lines.
 - **What:** the newest published pack with a manifest chosen (not a prerelease, not one without a manifest, not another
   release's tag), a manifest of another format refused; a pack downloaded from memory, put beside the library, read,
   the screens told (`revision`), its download's folder gone, then replaced by a newer one though the old one is open,
-  and taken out; a file that is not the manifest's not put in place, the folder left as it was.
+  and taken out; Krupnik's dictionary read again once the pack is put in place or taken out (`readDictionaries`, on
+  the test graph); a file that is not the manifest's not put in place, the folder left as it was.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, names in backticks as Zayit's; `TestScope` with its dispatcher for the downloads' work.
 - **Tests:** it is one (unit).
